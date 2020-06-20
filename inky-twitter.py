@@ -4,15 +4,17 @@
 # ####################
 ## IMPORT MODULES ##
 ####################
+import os
 import sys # This module provides access to some variables used or maintained by the interpreter and to functions that interact strongly with the interpreter. It is always available.
 import datetime # The datetime module supplies classes for manipulating dates and times.
 import argparse # Enables you to pass arguments through terminal
-import random # Enables picking randomin choices from lists
-import re # Strips text easily
+import random # Enables picking random choices from lists
+import pickle # Allows you to save and load abitrary data to files
 import keys # This module stores API credentials for use with the Twitter Developer API
 import twitter # This module handles interactions with the Twitter Developer API
 from PIL import Image, ImageFont, ImageDraw # This module handles creation of images and text, which are sent to the display
 from StringIO import StringIO
+from inky import InkyWHAT # This module makes the e-ink display work and renders the image
 
 #########################################
 ## SET VARIABLES FROM THE COMMAND LINE ##
@@ -21,8 +23,8 @@ from StringIO import StringIO
 # Command line arguments to set display type and colour, and enter your name
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--username", "-u", type=str, help="Your Twitter handle without the @ symbol", default="unsplash")
-parser.add_argument("--test", "-t", type=bool, default=True, help="Set to 'true' to output to local PNG instead of to the display")
+parser.add_argument("--username", "-u", type=str, help="Your Twitter handle without the @ symbol", default="johnpeart")
+parser.add_argument("--test", "-t", type=bool, help="Set to 'true' to output to local PNG instead of to the display")
 parser.add_argument("--colour", "-c", nargs="?", type=str, help="Set colour of the display", default="yellow")
 args = parser.parse_args()
 
@@ -35,31 +37,6 @@ test = args.test
 inkyColour = args.colour
 
 
-##########################
-## SET GLOBAL VARIABLES ##
-##########################
-
-yellow = "#9B870C"
-red = "#9B870C"
-white = "#ffffff"
-black = "#000000"
-
-if test == True:
-    displayHeight = 300
-    displayWidth = 400
-else:
-    from inky import InkyWHAT # This module makes the e-ink display work and renders the image
-    displayHeight = inky.HEIGHT
-    displayWidth = inky.WIDTH
-
-now = datetime.datetime.now()
-
-tweetFontSize = 16
-tweetSmallFontSize = 12
-accountFontSize = 16
-statsFontSize = 24
-
-
 
 ##################################
 ## SET UP THE INKY WHAT DISPLAY ##
@@ -69,8 +46,32 @@ statsFontSize = 24
 # Accepts arguments 'red', 'yellow' or 'black', based on the display you have. 
 # (You can only use 'red' with the red display, and 'yellow' with the yellow; but 'black' works with either).
 
-if test != True:
-    inky = InkyWHAT(inkyColour)
+inky = InkyWHAT(inkyColour)
+
+
+
+
+##########################
+## SET GLOBAL VARIABLES ##
+##########################
+
+if test == True:
+    yellow = "#9B870C"
+    red = "#9B870C"
+    white = "#ffffff"
+    black = "#000000"
+    displayHeight = 300
+    displayWidth = 400
+else:
+    yellow = inky.YELLOW
+    red = inky.RED
+    white = inky.WHITE
+    black = inky.BLACK
+    displayHeight = inky.HEIGHT
+    displayWidth = inky.WIDTH
+
+now = datetime.datetime.now()
+
 
 
 ##################################################
@@ -109,13 +110,46 @@ api = twitter.Api(
 # 1. "path/to/font" - where path/to/font is the path to the .ttf file
 # 2. font size - as an integer
 
-tweetFont = ImageFont.truetype("fonts/Regular.ttf", tweetFontSize)
-tweetSmallFont = ImageFont.truetype("fonts/Regular.ttf", tweetSmallFontSize)
-accountFont = ImageFont.truetype("fonts/Bold.ttf", accountFontSize)
-statsFont = ImageFont.truetype("fonts/Bold.ttf", statsFontSize)
+usernameFont = ImageFont.truetype("fonts/Bold.ttf", 25)
+descriptionFont = ImageFont.truetype("fonts/Regular.ttf", 13)
+headingFont = ImageFont.truetype("fonts/Bold.ttf", 14)
+statFont = ImageFont.truetype("fonts/Regular.ttf", 36)
 
-statsFontWidth, statsFontHeight = statsFont.getsize("ABCD ")
+usernameFontWidth, usernameFontHeight = usernameFont.getsize("ABCD ")
+descriptionFontWidth, descriptionFontHeight = descriptionFont.getsize("ABCD ")
+headingFontWidth, headingFontHeight = headingFont.getsize("ABCD ")
+statFontWidth, statFontHeight = statFont.getsize("ABCD ")
 
+
+
+
+
+#################
+## REFLOW TEXT ##
+#################
+# This function reflows text across multiple lines.
+# It is adapted from the Pimoroni guidance for the Inky wHAT.
+
+def reflowText(textToReflow, width, font):
+    words = textToReflow.split(" ")
+    reflowed = ''
+    line_length = 0
+    line_count = 1
+
+    for i in range(len(words)):
+        word = words[i] + " "
+        word_length = font.getsize(word)[0]
+        line_length += word_length
+
+        if line_length < width:
+            reflowed += word
+        else:
+            line_length = word_length
+            reflowed = reflowed[:-1] + "\n" + word
+            line_count += 1
+
+    print(reflowed)
+    return reflowed, line_count
 
 
 
@@ -127,12 +161,15 @@ statsFontWidth, statsFontHeight = statsFont.getsize("ABCD ")
 # representing thousands, millions, billions and trillions
 
 def human_format(num):
-    num = float('{:.3g}'.format(num))
-    magnitude = 0
-    while abs(num) >= 1000:
-        magnitude += 1
-        num /= 1000.0
-    return '{}{}'.format('{:f}'.format(num).rstrip('0').rstrip('.'), ['', 'K', 'M', 'B', 'T'][magnitude])
+    if abs(num) >= 99999:
+        num = float('{:.3g}'.format(num))
+        magnitude = 0
+        while abs(num) >= 1000:
+            magnitude += 1
+            num /= 1000.0
+        return '{}{}'.format('{:f}'.format(num).rstrip('0').rstrip('.'), ['', 'K', 'M', 'B', 'T'][magnitude])
+    else:
+        return '{:0,}'.format(num)
 
 
 
@@ -146,59 +183,143 @@ def human_format(num):
 def getUser(handle):
     getUser = api.GetUser(screen_name=handle, include_entities=True)
     return getUser
-#   return getUser.following, getUser.followers_count, getUser.friends_count, getUser.favourites_count, getUser.statuses_count
 
-user = getUser(twitterUsername)
-description = user.description
-verified = user.verified
-following = user.friends_count
-followers_count = user.followers_count
-statuses_count = user.statuses_count
-favourites_count = user.favourites_count
-listed_count = user.listed_count
 
-print('Username: @{}').format(twitterUsername) # Print the username
-print("Description: {}").format(description)
-print("Verified: {}").format(verified)
-print("Following: {}").format(following)
-print("Followers: {}").format(followers_count)
-print("Tweets: {}").format(statuses_count)
-print("Favourites: {}").format(favourites_count)
-print("Listed: {}").format(listed_count)
+
 
 ########################
-## FINALISE THE IMAGE ##
+## COMPARE SAVED DATA ##
 ########################
-# Set a PIL image, numpy array or list to Inky's internal buffer. The image dimensions should match the dimensions of the pHAT or wHAT you're using.
-# You should use PIL to create an image. PIL provides an ImageDraw module which allow you to draw text, lines and shapes over your image. 
-# See: https://pillow.readthedocs.io/en/stable/reference/ImageDraw.html
+# The data will output to an e-paper display, so to avoid needlessly updating the screen, we need to check against the things we saw last time.
+# This function tries to open the data store to compare the content of the file against the data the Twitter function pulls down, or else dump the current data into a new file for next time
 
-# inky.set_image(img)
-
-
-
-
-
-###############################
-## SET DISPLAY BORDER COLOUR ##
-###############################
-# .set_border(colour) sets the colour at the edge of the display
-# colour should be one of 'inky.RED', 'inky.YELLOW', 'inky.WHITE' or 'inky.BLACK' with available colours depending on your display type.
-
-# inky.set_border(white)
-
-
-
-
+def checkDataMatching():
+    try:
+        file = pickle.load(open('savedData.pickle', 'rb')) # Load the existing data, if it exists
+        if file.screen_name != user.screen_name:
+            print("NEW DATA. We need to refresh the screen.")
+            refresh = True
+        elif file.description != user.description:
+            print("NEW DATA. We need to refresh the screen.")
+            refresh = True
+        elif file.verified != user.verified:
+            print("NEW DATA. We need to refresh the screen.")
+            refresh = True
+        elif file.following != user.following:
+            print("NEW DATA. We need to refresh the screen.")
+            refresh = True
+        elif file.followers_count != user.followers_count:
+            print("NEW DATA. We need to refresh the screen.")
+            refresh = True
+        elif file.statuses_count != user.statuses_count:
+            print("NEW DATA. We need to refresh the screen.")
+            refresh = True
+        elif file.favourites_count != user.favourites_count:
+            print("NEW DATA. We need to refresh the screen.")
+            refresh = True
+        else:
+            print("NO NEW DATA. We do not need to refresh the screen.")
+            refresh = False
+    except (OSError, IOError) as e:
+        pickle.dump(user, open("savedData.pickle", "wb")) # Create a new file
+        print("NEW DATA. We need to refresh the screen.")
+        refresh = True
+    return refresh
 
 ########################
 ## UPDATE THE DISPLAY ##
 ########################
 # Once you've prepared and set your image, and chosen a border colour, you can update your e-ink display with .show()
 
-# if test == True:
-#     print('Updating local image')
-#     img.save("./inky-nth-tweet/debug.png")
-# else:
-#     print('Updating Inky wHAT display')
-#     inky.show()
+def updateDisplay(refresh, user):
+    if user.verified == True:
+        screen_name = u'\u2713' + " @" + user.screen_name
+    else:
+        screen_name = "@" + user.screen_name
+    description = user.description
+
+    following = user.friends_count
+    followers_count = user.followers_count
+    statuses_count = user.statuses_count
+    favourites_count = user.favourites_count
+
+    file = pickle.load(open('savedData.pickle', 'rb')) # Load the existing data, if it exists
+    print(file)
+    followers_change = followers_count - file.followers_count
+    following_change = following - file.friends_count
+    statuses_change = statuses_count - file.statuses_count
+    favourites_change = favourites_count - file.favourites_count
+
+    if followers_change > 0:
+        followers_trend = u'\u2197' + " +" + human_format(followers_change)
+    elif followers_change < 0:
+        followers_trend = u'\u2198' + " " + human_format(followers_change)
+    else:
+        followers_trend = "No change"
+
+    if following_change > 0:
+        following_trend = u'\u2197' + " +" + human_format(following_change)
+    elif following_change < 0:
+        following_trend = u'\u2198' + " " + human_format(following_change)
+    else:
+        following_trend = "No change"
+
+    if statuses_change > 0:
+        statuses_trend = u'\u2197' + " +" + human_format(statuses_change)
+    elif statuses_change < 0:
+        statuses_trend = u'\u2198' + " " + human_format(statuses_change)
+    else:
+        statuses_trend = "No change"
+
+    if favourites_change > 0:
+        favourites_trend = u'\u2197' + " +" + human_format(favourites_change)
+    elif favourites_change < 0:
+        favourites_trend = u'\u2198' + " " + human_format(favourites_change)
+    else:
+        favourites_trend = "No change"
+
+    pickle.dump(user, open("savedData.pickle", "wb")) # Overwrite the data with the latest pull
+
+    img = Image.new("P", (displayWidth, displayHeight))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([(0, 0), (displayWidth, displayHeight)], fill = white, outline=None)
+    draw.text((20, 20), screen_name, yellow, usernameFont)
+    reflowed = reflowText(description, (displayWidth - 40), descriptionFont)
+    reflowedDescription, lineCount = reflowed
+    draw.text((20, 60), reflowedDescription, black, descriptionFont)
+    draw.text((20, 140), "Followers", black, headingFont)
+    draw.text((200, 140), "Following", black, headingFont)
+    draw.text((20, 220), "Tweets", black, headingFont)
+    draw.text((200, 220), "Favourites", black, headingFont)
+    draw.text((20, 160), human_format(followers_count), black, statFont)
+    draw.text((200, 160), human_format(following), black, statFont)
+    draw.text((20, 240), human_format(statuses_count), black, statFont)
+    draw.text((200, 240), human_format(favourites_count), black, statFont)
+    draw.text((105, 140), followers_trend, yellow, headingFont)
+    draw.text((285, 140), following_trend, yellow, headingFont)
+    draw.text((85, 220), statuses_trend, yellow, headingFont)
+    draw.text((290, 220), favourites_trend, yellow, headingFont)
+
+    if test == True:
+        print('Updating local image')
+        img.save("debug.png")
+    else:
+        if refresh == True:
+            print('Updating Inky wHAT display')
+            inky.set_image(img) # Set a PIL image, numpy array or list to Inky's internal buffer.
+            inky.set_border(white) # .set_border(colour) sets the colour at the edge of the display
+            inky.show()
+        else:
+            print('Do nothing')
+
+
+
+
+#########################
+## PUT IT ALL TOGETHER ##
+#########################
+
+user = getUser(twitterUsername)
+refresh = checkDataMatching()
+updateDisplay(refresh, user)
+
