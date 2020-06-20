@@ -38,42 +38,6 @@ inkyColour = args.colour
 
 
 
-##################################
-## SET UP THE INKY WHAT DISPLAY ##
-##################################
-# Set the display type and colour
-# InkyPHAT is for the smaller display and InkyWHAT is for the larger display.
-# Accepts arguments 'red', 'yellow' or 'black', based on the display you have. 
-# (You can only use 'red' with the red display, and 'yellow' with the yellow; but 'black' works with either).
-
-inky = InkyWHAT(inkyColour)
-
-
-
-
-##########################
-## SET GLOBAL VARIABLES ##
-##########################
-
-if test == True:
-    yellow = "#9B870C"
-    red = "#9B870C"
-    white = "#ffffff"
-    black = "#000000"
-    displayHeight = 300
-    displayWidth = 400
-else:
-    yellow = inky.YELLOW
-    red = inky.RED
-    white = inky.WHITE
-    black = inky.BLACK
-    displayHeight = inky.HEIGHT
-    displayWidth = inky.WIDTH
-
-now = datetime.datetime.now()
-
-
-
 ##################################################
 ## IMPORT THE TWITTER DEVELOPER API CREDENTIALS ##
 ##################################################
@@ -98,11 +62,6 @@ api = twitter.Api(
 
 
 
-
-
-
-
-
 ##########################
 ## IMPORT FONTS FOR USE ##
 ##########################
@@ -110,11 +69,11 @@ api = twitter.Api(
 # 1. "path/to/font" - where path/to/font is the path to the .ttf file
 # 2. font size - as an integer
 
-usernameFont = ImageFont.truetype("fonts/Bold.ttf", 25)
-descriptionFont = ImageFont.truetype("fonts/Regular.ttf", 13)
-headingFont = ImageFont.truetype("fonts/Bold.ttf", 14)
-statFont = ImageFont.truetype("fonts/Regular.ttf", 36)
-
+usernameFont = ImageFont.truetype("./inky-twitter-stats/fonts/Heavy.otf", 25)
+descriptionFont = ImageFont.truetype("./inky-twitter-stats/fonts/Regular.otf", 16)
+headingFont = ImageFont.truetype("./inky-twitter-stats/fonts/Heavy.otf", 14)
+statFont = ImageFont.truetype("./inky-twitter-stats/fonts/Light.otf", 36)
+    
 usernameFontWidth, usernameFontHeight = usernameFont.getsize("ABCD ")
 descriptionFontWidth, descriptionFontHeight = descriptionFont.getsize("ABCD ")
 headingFontWidth, headingFontHeight = headingFont.getsize("ABCD ")
@@ -148,7 +107,6 @@ def reflowText(textToReflow, width, font):
             reflowed = reflowed[:-1] + "\n" + word
             line_count += 1
 
-    print(reflowed)
     return reflowed, line_count
 
 
@@ -195,7 +153,7 @@ def getUser(handle):
 
 def checkDataMatching():
     try:
-        file = pickle.load(open('savedData.pickle', 'rb')) # Load the existing data, if it exists
+        file = pickle.load(open('./inky-twitter-stats/savedData.pickle', 'rb')) # Load the existing data, if it exists
         if file.screen_name != user.screen_name:
             print("NEW DATA. We need to refresh the screen.")
             refresh = True
@@ -221,10 +179,25 @@ def checkDataMatching():
             print("NO NEW DATA. We do not need to refresh the screen.")
             refresh = False
     except (OSError, IOError) as e:
-        pickle.dump(user, open("savedData.pickle", "wb")) # Create a new file
+        pickle.dump(user, open("./inky-twitter-stats/savedData.pickle", "wb")) # Create a new file
         print("NEW DATA. We need to refresh the screen.")
         refresh = True
     return refresh
+
+
+
+##################################
+## SET UP THE INKY WHAT DISPLAY ##
+##################################
+# Set the display type and colour
+# InkyPHAT is for the smaller display and InkyWHAT is for the larger display.
+# Accepts arguments 'red', 'yellow' or 'black', based on the display you have. 
+# (You can only use 'red' with the red display, and 'yellow' with the yellow; but 'black' works with either).
+
+def initialiseScreen(inkyColour):
+    inky = InkyWHAT(inkyColour)
+    return inky
+
 
 ########################
 ## UPDATE THE DISPLAY ##
@@ -232,85 +205,103 @@ def checkDataMatching():
 # Once you've prepared and set your image, and chosen a border colour, you can update your e-ink display with .show()
 
 def updateDisplay(refresh, user):
-    if user.verified == True:
-        screen_name = u'\u2713' + " @" + user.screen_name
-    else:
-        screen_name = "@" + user.screen_name
-    description = user.description
+    if refresh == True:
+        
+        if test == True:
+            yellow = "#9B870C"
+            red = "#9B870C"
+            white = "#ffffff"
+            black = "#000000"
+            displayHeight = 300
+            displayWidth = 400
+        else:
+            inky = initialiseScreen(inkyColour)
+            yellow = inky.YELLOW
+            red = inky.RED
+            white = inky.WHITE
+            black = inky.BLACK
+            displayHeight = inky.HEIGHT
+            displayWidth = inky.WIDTH
 
-    following = user.friends_count
-    followers_count = user.followers_count
-    statuses_count = user.statuses_count
-    favourites_count = user.favourites_count
+        if user.verified == True:
+            screen_name = u'\u2713' + " @" + user.screen_name
+        else:
+            screen_name = "@" + user.screen_name
+        description = user.description
 
-    file = pickle.load(open('savedData.pickle', 'rb')) # Load the existing data, if it exists
-    print(file)
-    followers_change = followers_count - file.followers_count
-    following_change = following - file.friends_count
-    statuses_change = statuses_count - file.statuses_count
-    favourites_change = favourites_count - file.favourites_count
+        following = user.friends_count
+        followers_count = user.followers_count
+        statuses_count = user.statuses_count
+        favourites_count = user.favourites_count
 
-    if followers_change > 0:
-        followers_trend = u'\u2197' + " +" + human_format(followers_change)
-    elif followers_change < 0:
-        followers_trend = u'\u2198' + " " + human_format(followers_change)
-    else:
-        followers_trend = "No change"
+        file = pickle.load(open('./inky-twitter-stats/savedData.pickle', 'rb')) # Load the existing data, if it exists
 
-    if following_change > 0:
-        following_trend = u'\u2197' + " +" + human_format(following_change)
-    elif following_change < 0:
-        following_trend = u'\u2198' + " " + human_format(following_change)
-    else:
-        following_trend = "No change"
+        followers_change = followers_count - file.followers_count
+        following_change = following - file.friends_count
+        statuses_change = statuses_count - file.statuses_count
+        favourites_change = favourites_count - file.favourites_count
 
-    if statuses_change > 0:
-        statuses_trend = u'\u2197' + " +" + human_format(statuses_change)
-    elif statuses_change < 0:
-        statuses_trend = u'\u2198' + " " + human_format(statuses_change)
-    else:
-        statuses_trend = "No change"
+        if followers_change > 0:
+            followers_trend = u'\u2197' + " +" + human_format(followers_change)
+        elif followers_change < 0:
+            followers_trend = u'\u2198' + " " + human_format(followers_change)
+        else:
+            followers_trend = "No change"
 
-    if favourites_change > 0:
-        favourites_trend = u'\u2197' + " +" + human_format(favourites_change)
-    elif favourites_change < 0:
-        favourites_trend = u'\u2198' + " " + human_format(favourites_change)
-    else:
-        favourites_trend = "No change"
+        if following_change > 0:
+            following_trend = u'\u2197' + " +" + human_format(following_change)
+        elif following_change < 0:
+            following_trend = u'\u2198' + " " + human_format(following_change)
+        else:
+            following_trend = "No change"
 
-    pickle.dump(user, open("savedData.pickle", "wb")) # Overwrite the data with the latest pull
+        if statuses_change > 0:
+            statuses_trend = u'\u2197' + " +" + human_format(statuses_change)
+        elif statuses_change < 0:
+            statuses_trend = u'\u2198' + " " + human_format(statuses_change)
+        else:
+            statuses_trend = "No change"
 
-    img = Image.new("P", (displayWidth, displayHeight))
-    draw = ImageDraw.Draw(img)
-    draw.rectangle([(0, 0), (displayWidth, displayHeight)], fill = white, outline=None)
-    draw.text((20, 20), screen_name, yellow, usernameFont)
-    reflowed = reflowText(description, (displayWidth - 40), descriptionFont)
-    reflowedDescription, lineCount = reflowed
-    draw.text((20, 60), reflowedDescription, black, descriptionFont)
-    draw.text((20, 140), "Followers", black, headingFont)
-    draw.text((200, 140), "Following", black, headingFont)
-    draw.text((20, 220), "Tweets", black, headingFont)
-    draw.text((200, 220), "Favourites", black, headingFont)
-    draw.text((20, 160), human_format(followers_count), black, statFont)
-    draw.text((200, 160), human_format(following), black, statFont)
-    draw.text((20, 240), human_format(statuses_count), black, statFont)
-    draw.text((200, 240), human_format(favourites_count), black, statFont)
-    draw.text((105, 140), followers_trend, yellow, headingFont)
-    draw.text((285, 140), following_trend, yellow, headingFont)
-    draw.text((85, 220), statuses_trend, yellow, headingFont)
-    draw.text((290, 220), favourites_trend, yellow, headingFont)
+        if favourites_change > 0:
+            favourites_trend = u'\u2197' + " +" + human_format(favourites_change)
+        elif favourites_change < 0:
+            favourites_trend = u'\u2198' + " " + human_format(favourites_change)
+        else:
+            favourites_trend = "No change"
 
-    if test == True:
-        print('Updating local image')
-        img.save("debug.png")
-    else:
-        if refresh == True:
+        pickle.dump(user, open("./inky-twitter-stats/savedData.pickle", "wb")) # Overwrite the data with the latest pull
+
+        img = Image.new("P", (displayWidth, displayHeight))
+        draw = ImageDraw.Draw(img)
+        draw.rectangle([(0, 0), (displayWidth, displayHeight)], fill = white, outline=None)
+        draw.text((20, 20), screen_name, yellow, usernameFont)
+        reflowed = reflowText(description, (displayWidth - 40), descriptionFont)
+        reflowedDescription, lineCount = reflowed
+        draw.text((20, 60), reflowedDescription, black, descriptionFont)
+        draw.text((20, 140), "Followers", black, headingFont)
+        draw.text((200, 140), "Following", black, headingFont)
+        draw.text((20, 220), "Tweets", black, headingFont)
+        draw.text((200, 220), "Favourites", black, headingFont)
+        draw.text((20, 160), human_format(followers_count), black, statFont)
+        draw.text((200, 160), human_format(following), black, statFont)
+        draw.text((20, 240), human_format(statuses_count), black, statFont)
+        draw.text((200, 240), human_format(favourites_count), black, statFont)
+        draw.text((105, 140), followers_trend, yellow, headingFont)
+        draw.text((285, 140), following_trend, yellow, headingFont)
+        draw.text((85, 220), statuses_trend, yellow, headingFont)
+        draw.text((290, 220), favourites_trend, yellow, headingFont)
+
+        if test == True:
+            print('Updating local image')
+            img.save("./inky-twitter-stats/debug.png")
+        else:
             print('Updating Inky wHAT display')
             inky.set_image(img) # Set a PIL image, numpy array or list to Inky's internal buffer.
             inky.set_border(white) # .set_border(colour) sets the colour at the edge of the display
             inky.show()
-        else:
-            print('Do nothing')
+    else:
+        print('Do nothing')
+
 
 
 
@@ -322,4 +313,3 @@ def updateDisplay(refresh, user):
 user = getUser(twitterUsername)
 refresh = checkDataMatching()
 updateDisplay(refresh, user)
-
