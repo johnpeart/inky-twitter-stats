@@ -66,13 +66,13 @@ api = twitter.Api(
 ## IMPORT FONTS FOR USE ##
 ##########################
 # ImageFont.truetype accepts two arguments, (1, 2):
-# 1. "path/to/font" - where path/to/font is the path to the .ttf file
+# 1. "path/to/font" - where path/to/font is the path to the .ttf or .otf file
 # 2. font size - as an integer
 
-usernameFont = ImageFont.truetype("./inky-twitter-stats/fonts/Heavy.otf", 25)
-descriptionFont = ImageFont.truetype("./inky-twitter-stats/fonts/Regular.otf", 16)
-headingFont = ImageFont.truetype("./inky-twitter-stats/fonts/Heavy.otf", 14)
-statFont = ImageFont.truetype("./inky-twitter-stats/fonts/Light.otf", 36)
+usernameFont = ImageFont.truetype("./inky-twitter-stats/fonts/heavy.otf", 25)
+descriptionFont = ImageFont.truetype("./inky-twitter-stats/fonts/regular.otf", 16)
+headingFont = ImageFont.truetype("./inky-twitter-stats/fonts/heavy.otf", 16)
+statFont = ImageFont.truetype("./inky-twitter-stats/fonts/light.otf", 36)
     
 usernameFontWidth, usernameFontHeight = usernameFont.getsize("ABCD ")
 descriptionFontWidth, descriptionFontHeight = descriptionFont.getsize("ABCD ")
