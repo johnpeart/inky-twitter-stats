@@ -37,12 +37,17 @@ python inky-twitter.py
 
 You can pass the following arguments to `inky-twitter.py`
 
-- `--username`, `-u` - sets the username of the account to check against
+- `--username`, `-u` - sets the username of the account to check against (defaults to my Twitter `johnpeart`)
 - `--test`, `-t` - outputs a local PNG file `debug.png` instead of updating the Inky wHAT (defaults to False)
 - `--colour`, `-c` - sets the colour of the display (defaults to yellow)
 - `--help`, `-h` - runs the help
 
 ### Examples
+
+```python
+# Run program and check @johnpeart
+python inky-twitter.py -u johnpeart
+```
 
 ```python
 # Output locally to a PNG
