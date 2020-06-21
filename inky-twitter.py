@@ -69,6 +69,10 @@ api = twitter.Api(
 # 1. "path/to/font" - where path/to/font is the path to the .ttf or .otf file
 # 2. font size - as an integer
 
+##### YOU WILL NEED TO CHANGE THESE FONTS TO MATCH FONTS YOU CHOOSE
+##### I HAVE USED A COMMERCIAL FONT ON MY PI, LOCALLY, SO CAN'T UPLOAD THAT
+##### INCLUDED IN THE /fonts FOLDER ARE TWO OPEN SOURCED FONTS
+
 usernameFont = ImageFont.truetype("./inky-twitter-stats/fonts/heavy.otf", 25)
 descriptionFont = ImageFont.truetype("./inky-twitter-stats/fonts/regular.otf", 16)
 headingFont = ImageFont.truetype("./inky-twitter-stats/fonts/heavy.otf", 16)
