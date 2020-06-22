@@ -73,10 +73,10 @@ api = twitter.Api(
 ##### I HAVE USED A COMMERCIAL FONT ON MY PI, LOCALLY, SO CAN'T UPLOAD THAT
 ##### INCLUDED IN THE /fonts FOLDER ARE TWO OPEN SOURCED FONTS
 
-usernameFont = ImageFont.truetype("./inky-twitter-stats/fonts/heavy.otf", 25)
-descriptionFont = ImageFont.truetype("./inky-twitter-stats/fonts/regular.otf", 16)
-headingFont = ImageFont.truetype("./inky-twitter-stats/fonts/heavy.otf", 16)
-statFont = ImageFont.truetype("./inky-twitter-stats/fonts/light.otf", 36)
+usernameFont = ImageFont.truetype("/home/pi/inky-twitter-stats/fonts/heavy.otf", 25)
+descriptionFont = ImageFont.truetype("/home/pi/inky-twitter-stats/fonts/regular.otf", 16)
+headingFont = ImageFont.truetype("/home/pi/inky-twitter-stats/fonts/heavy.otf", 16)
+statFont = ImageFont.truetype("/home/pi/inky-twitter-stats/fonts/light.otf", 36)
     
 usernameFontWidth, usernameFontHeight = usernameFont.getsize("ABCD ")
 descriptionFontWidth, descriptionFontHeight = descriptionFont.getsize("ABCD ")
@@ -157,7 +157,7 @@ def getUser(handle):
 
 def checkDataMatching():
     try:
-        file = pickle.load(open('./inky-twitter-stats/savedData.pickle', 'rb')) # Load the existing data, if it exists
+        file = pickle.load(open('/home/pi/inky-twitter-stats/savedData.pickle', 'rb')) # Load the existing data, if it exists
         if file.screen_name != user.screen_name:
             print("NEW DATA. We need to refresh the screen.")
             refresh = True
@@ -183,7 +183,7 @@ def checkDataMatching():
             print("NO NEW DATA. We do not need to refresh the screen.")
             refresh = False
     except (OSError, IOError) as e:
-        pickle.dump(user, open("./inky-twitter-stats/savedData.pickle", "wb")) # Create a new file
+        pickle.dump(user, open("/home/pi/inky-twitter-stats/" + "{}".format(twitterUsername) + ".pickle", "wb")) # Create a new file
         print("NEW DATA. We need to refresh the screen.")
         refresh = True
     return refresh
@@ -238,7 +238,7 @@ def updateDisplay(refresh, user):
         statuses_count = user.statuses_count
         favourites_count = user.favourites_count
 
-        file = pickle.load(open('./inky-twitter-stats/savedData.pickle', 'rb')) # Load the existing data, if it exists
+        file = pickle.load(open('/home/pi/inky-twitter-stats/savedData.pickle', 'rb')) # Load the existing data, if it exists
 
         followers_change = followers_count - file.followers_count
         following_change = following - file.friends_count
@@ -247,33 +247,43 @@ def updateDisplay(refresh, user):
 
         if followers_change > 0:
             followers_trend = u'\u2197' + " +" + human_format(followers_change)
+            dataChange = True
         elif followers_change < 0:
             followers_trend = u'\u2198' + " " + human_format(followers_change)
+            dataChange = True
         else:
             followers_trend = "No change"
 
         if following_change > 0:
             following_trend = u'\u2197' + " +" + human_format(following_change)
+            dataChange = True
         elif following_change < 0:
             following_trend = u'\u2198' + " " + human_format(following_change)
+            dataChange = True
         else:
             following_trend = "No change"
 
         if statuses_change > 0:
             statuses_trend = u'\u2197' + " +" + human_format(statuses_change)
+            dataChange = True
         elif statuses_change < 0:
             statuses_trend = u'\u2198' + " " + human_format(statuses_change)
+            dataChange = True
         else:
             statuses_trend = "No change"
 
         if favourites_change > 0:
             favourites_trend = u'\u2197' + " +" + human_format(favourites_change)
+            dataChange = True
         elif favourites_change < 0:
             favourites_trend = u'\u2198' + " " + human_format(favourites_change)
+            dataChange = True
         else:
             favourites_trend = "No change"
 
-        pickle.dump(user, open("./inky-twitter-stats/savedData.pickle", "wb")) # Overwrite the data with the latest pull
+        if dataChange == True:
+            pickle.dump(user, open("/home/pi/inky-twitter-stats/" + "{}".format(twitterUsername) + ".pickle", "wb")) # Overwrite the data with the latest pull
+            print("UPDATE SAVED DATA")
 
         img = Image.new("P", (displayWidth, displayHeight))
         draw = ImageDraw.Draw(img)
@@ -297,7 +307,7 @@ def updateDisplay(refresh, user):
 
         if test == True:
             print('Updating local image')
-            img.save("./inky-twitter-stats/debug.png")
+            img.save("/home/pi/inky-twitter-stats/debug.png")
         else:
             print('Updating Inky wHAT display')
             inky.set_image(img) # Set a PIL image, numpy array or list to Inky's internal buffer.
